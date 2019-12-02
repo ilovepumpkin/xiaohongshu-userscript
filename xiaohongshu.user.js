@@ -8,30 +8,38 @@
 // @grant        none
 // ==/UserScript==
 
-(function() {
+(function () {
     'use strict';
-
-    function createButton(btnText,parent){
-      const btn=document.createElement("input")
-      btn.value=btnText
-      btn.type="button"
-      parent.appendChild(btn)
-      return btn;
+    const titleElem = document.querySelector("h1[class='title']");
+    const title = titleElem && titleElem.textContent
+    function createButton(btnText, parent) {
+        const btn = document.createElement("input")
+        btn.value = btnText
+        btn.type = "button"
+        parent.appendChild(btn)
+        return btn;
     }
 
+    function downloadImage(rawUrl, idx) {
+        const url = "https://" + rawUrl.replace('url("//', '').replace(/\?.*/, '')
+        let fileName = title ? title + "-" + idx : url.substring(url.lastIndexOf("/") + 1)
+        fileName = fileName + ".jpg"
+        downloadUrlFile(url, fileName)
+    }
 
-    function downloadUrlFile(rawUrl,idx) {
-        const title=document.querySelector("h1[class='title']").textContent
-        const url="https://"+rawUrl.replace('url("//','').replace(/\?.*/,'')
-        const fileName=title+"-"+idx+".jpg"
+    function downloadVideo(rawUrl) {
+        let fileName = title ? title : rawUrl.substring(rawUrl.lastIndexOf("/") + 1, rawUrl.indexOf("?"))
+        fileName = fileName + ".mp4"
+        downloadUrlFile(rawUrl.replace("http", "https"), fileName)
+    }
+
+    function downloadUrlFile(url, fileName) {
         const xhr = new XMLHttpRequest();
         xhr.open('GET', url, true);
         xhr.responseType = 'blob';
         xhr.onload = () => {
             if (xhr.status === 200) {
-                // 获取图片blob数据并保存
-                //saveAs(xhr.response, 'abc.jpg');
-                save(fileName,xhr.response)
+                save(fileName, xhr.response)
             }
         };
 
@@ -47,33 +55,45 @@
         save_link.click();
     }
 
-    const slide=document.querySelector("ul[class='slide']")
-    const leftCard=document.querySelector("div[class='left-card']")
-    const btnContainer=document.createElement("div")
-    btnContainer.style="display:flex;justify-content:space-between;padding:0px 100px 20px;"
-    leftCard.insertBefore(btnContainer,leftCard.firstChild)
+    const leftCard = document.querySelector("div[class='left-card']")
+    const btnContainer = document.createElement("div")
+    leftCard.insertBefore(btnContainer, leftCard.firstChild)
 
-    const btnAll=createButton("下载全部",btnContainer)
-    btnAll.onclick=function(){
-       document.querySelector("ul[class='slide']").querySelectorAll("span").forEach((x,idx)=>{
-             downloadUrlFile(x.style["background-image"],idx+1)
-       })
-    }
+    const video = document.querySelector("video");
 
-    const btnCurrent=createButton("下载当前",btnContainer)
-    btnCurrent.onclick=function(){
-       let current;
-       let idx;
-       slide.querySelectorAll("li").forEach((x,index)=>{if(x.style.display!=='none'){current=x;idx=index+1}})
-       downloadUrlFile(current.firstChild.style["background-image"],idx)
-    }
+    if (video) {
+        btnContainer.style = "display:flex;justify-content:center;padding:0px 100px 20px;"
+        const btnVideo = createButton("下载视频", btnContainer)
+        btnVideo.onclick = function () {
+            downloadVideo(video.src)
+        }
+    } else {
+        btnContainer.style = "display:flex;justify-content:space-between;padding:0px 100px 20px;"
+        const slide = document.querySelector("ul[class='slide']")
 
-    const btnBigView=createButton("看大图",btnContainer)
-    btnBigView.onclick=function(){
-       let current;
-       let idx;
-       slide.querySelectorAll("li").forEach((x,index)=>{if(x.style.display!=='none'){current=x;idx=index+1}})
-       const url="https://"+current.firstChild.style["background-image"].replace('url("//','').replace(/\?.*/,'')
-       window.open(url,"_blank")
+        const btnBigView = createButton("看大图", btnContainer)
+        btnBigView.onclick = function () {
+            let current;
+            let idx;
+            slide.querySelectorAll("li").forEach((x, index) => { if (x.style.display !== 'none') { current = x; idx = index + 1 } })
+            const url = "https://" + current.firstChild.style["background-image"].replace('url("//', '').replace(/\?.*/, '')
+            window.open(url, "_blank")
+        }
+
+        const btnCurrent = createButton("下载", btnContainer)
+        btnCurrent.onclick = function () {
+            let current;
+            let idx;
+            slide.querySelectorAll("li").forEach((x, index) => { if (x.style.display !== 'none') { current = x; idx = index + 1 } })
+            downloadImage(current.firstChild.style["background-image"], idx)
+        }
+
+        const btnAll = createButton("全部下载", btnContainer)
+        btnAll.onclick = function () {
+            document.querySelector("ul[class='slide']").querySelectorAll("span").forEach((x, idx) => {
+                downloadImage(x.style["background-image"], idx + 1)
+            })
+        }
+
     }
 })();
